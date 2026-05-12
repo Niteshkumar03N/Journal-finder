@@ -1,2 +1,14 @@
 streamlit
 scrapling[all]
+streamlit
+pandas
+requests
+beautifulsoup4
+lxml
+selenium
+webdriver-manager
+playwright
+patchright
+fake-useragent
+numpy
+openpyxl
