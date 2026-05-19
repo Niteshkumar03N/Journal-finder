@@ -1,9 +1,9 @@
-# =====================================
-# elsevier_scraper.py
-# =====================================
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
-from scrapling.fetchers import StealthyFetcher
 from urllib.parse import quote_plus
+
 import re
 import time
 
@@ -12,7 +12,7 @@ BASE_URL = (
 )
 
 # =====================================
-# SEARCH ELSEVIER
+# SEARCH FUNCTION
 # =====================================
 
 def search_elsevier(abstract):
@@ -33,51 +33,63 @@ def search_elsevier(abstract):
         f"&agreementsFilter=all-journals"
     )
 
-    print(f"\n[*] Searching Elsevier...")
-    print(f"[*] URL: {url}")
-
     # =====================================
-    # FETCH SEARCH PAGE
+    # CHROME OPTIONS
     # =====================================
 
-    page = StealthyFetcher.fetch(
-        url,
-        headless=True,
-        network_idle=True,
+    options = Options()
+
+    options.add_argument("--headless=new")
+
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    options.add_argument("--window-size=1920,1080")
+
+    options.add_argument("--disable-dev-shm-usage")
+
+    options.add_argument("--no-sandbox")
+
+    # options.add_argument("--headless")
+
+    # =====================================
+    # OPEN BROWSER
+    # =====================================
+
+    driver = webdriver.Chrome(
+        options=options
     )
 
-    print(f"[*] Status: {page.status}")
+    driver.get(url)
 
     # =====================================
-    # RESULT CARDS
+    # WAIT FOR RESULTS
     # =====================================
 
-    cards = page.css("article")
-
-    if not cards:
-        cards = page.css("div")
-
-    print(f"[*] Found {len(cards)} results")
+    time.sleep(10)
 
     # =====================================
-    # LOOP RESULTS
+    # FIND RESULT CARDS
     # =====================================
 
-    for idx, card in enumerate(
-        cards,
-        start=1
-    ):
+    cards = driver.find_elements(
+        By.TAG_NAME,
+        "article"
+    )
+
+    all_journals = []
+
+    # =====================================
+    # LOOP THROUGH RESULTS
+    # =====================================
+
+    for card in cards:
 
         try:
 
-            print(f"\n======================")
-            print(f"Processing Result {idx}")
-            print(f"======================")
-
-            detail_text = card.text
-
-            # DEBUG
-            print(detail_text)
+            detail_text = (
+                card.text
+                .strip()
+            )
 
             # =====================================
             # TITLE
@@ -85,186 +97,238 @@ def search_elsevier(abstract):
 
             title = "N/A"
 
-            title_el = card.css("h2")
-
-            if title_el:
+            try:
 
                 title = (
-                    title_el[0]
+                    card.find_element(
+                        By.TAG_NAME,
+                        "h2"
+                    )
                     .text
                     .strip()
                 )
 
+            except:
+                pass
+
             # =====================================
-            # URL
+            # JOURNAL URL
             # =====================================
 
-            links = card.css("a")
+            journal_url = ""
 
-            journal_url = None
+            try:
 
-            for a in links:
-
-                href = a.attrib.get(
-                    "href",
-                    ""
+                links = card.find_elements(
+                    By.TAG_NAME,
+                    "a"
                 )
 
-                if not href:
-                    continue
-
-                if href.startswith("/"):
+                for a in links:
 
                     href = (
-                        "https://journalfinder.elsevier.com"
-                        + href
+                        a.get_attribute(
+                            "href"
+                        )
                     )
 
-                if (
-                    "journal" in href.lower()
-                    or "sciencedirect" in href.lower()
-                    or "elsevier" in href.lower()
-                ):
+                    if not href:
+                        continue
 
-                    journal_url = href
+                    if (
+                        "journal"
+                        in href.lower()
+                        or
+                        "sciencedirect"
+                        in href.lower()
+                        or
+                        "elsevier"
+                        in href.lower()
+                    ):
 
-                    break
+                        journal_url = href
+                        break
 
-            if not journal_url:
-
-                print(
-                    "[!] No journal URL found"
-                )
-
-                continue
+            except:
+                pass
 
             # =====================================
             # IMPACT FACTOR
             # =====================================
 
-            impact_factor = None
+            impact_factor = "—"
 
-            if (
-                "Impact Factor"
-                in detail_text
-            ):
+            impact_match = re.search(
+                r'Impact\s*Factor\s*([\d.]+)',
+                detail_text,
+                re.IGNORECASE
+            )
 
-                impact_match = re.search(
-                    r'Impact\s*Factor\s*([\d.]+)',
-                    detail_text,
-                    re.IGNORECASE
+            if impact_match:
+
+                impact_factor = (
+                    impact_match.group(1)
                 )
-
-                if impact_match:
-
-                    impact_factor = (
-                        impact_match.group(1)
-                    )
 
             # =====================================
             # CITESCORE
             # =====================================
 
-            citescore = None
+            citescore = ""
 
-            if (
-                "CiteScore"
-                in detail_text
-            ):
-
-                citescore_match = re.search(
-                    r'CiteScore\s*([\d.]+)',
-                    detail_text,
-                    re.IGNORECASE
-                )
-
-                if citescore_match:
-
-                    citescore = (
-                        citescore_match.group(1)
-                    )
-
-            # =====================================
-            # FIRST DECISION
-            # =====================================
-
-            first_decision = None
-
-            if (
-                "Submission to first decision"
-                in detail_text
-            ):
-
-                decision_match = re.search(
-                    r'Submission\s*to\s*first\s*decision\s*([\d]+\s*days)',
-                    detail_text,
-                    re.IGNORECASE
-                )
-
-                if decision_match:
-
-                    first_decision = (
-                        decision_match.group(1)
-                    )
-
-            # =====================================
-            # PUBLISHING MODEL
-            # =====================================
-
-            publishing_model = (
-                "Subscription"
+            citescore_match = re.search(
+                r'CiteScore\s*([\d.]+)',
+                detail_text,
+                re.IGNORECASE
             )
 
-            if (
-                "Open Access"
-                in detail_text
-                or
-                "Gold Open Access"
-                in detail_text
-            ):
+            if citescore_match:
 
-                publishing_model = (
-                    "Open Access"
+                citescore = (
+                    citescore_match.group(1)
                 )
 
             # =====================================
-            # SAVE
+            # SUBMISSION TO FIRST DECISION
+            # =====================================
+
+            first_decision = ""
+
+            decision_match = re.search(
+                r'Submission\s*to\s*first\s*decision\s*([\d]+\s*days)',
+                detail_text,
+                re.IGNORECASE
+            )
+
+            if decision_match:
+
+                first_decision = (
+                    decision_match.group(1)
+                )
+
+            # =====================================
+            # ACCEPTANCE TO PUBLICATION
+            # =====================================
+
+            acceptance_to_publication = ""
+
+            acceptance_match = re.search(
+                r'Acceptance\s*to\s*publication\s*([\d]+\s*days)',
+                detail_text,
+                re.IGNORECASE
+            )
+
+            if acceptance_match:
+
+                acceptance_to_publication = (
+                    acceptance_match.group(1)
+                )
+
+            # =====================================
+            # PUBLICATION CHARGE
+            # =====================================
+
+            publication_charge = ""
+
+            publication_match = re.search(
+                r'(\$[\d,]+)\s*Article\s*Publishing\s*Charge',
+                detail_text,
+                re.IGNORECASE
+            )
+
+            if publication_match:
+
+                publication_charge = (
+                    publication_match.group(1)
+                )
+
+            # =====================================
+            # OPEN ACCESS / SUBSCRIPTION
+            # =====================================
+
+            open_access = "No"
+            subscription = "No"
+
+            if (
+                "open access"
+                in detail_text.lower()
+                or
+                "gold open access"
+                in detail_text.lower()
+            ):
+
+                open_access = "Yes"
+
+            if (
+                "subscription"
+                in detail_text.lower()
+            ):
+
+                subscription = "Yes"
+
+            # =====================================
+            # FINAL JSON
             # =====================================
 
             journal = {
 
-                "journal_name":
+                "title":
                     title,
+
+                "link":
+                    journal_url,
 
                 "impact_factor":
                     impact_factor,
 
-                "citescore":
+                "CiteScore":
                     citescore,
 
                 "submission_to_first_decision":
                     first_decision,
 
-                "publishing_model":
-                    publishing_model,
+                "Acceptance_to_publication":
+                    acceptance_to_publication,
 
-                "publisher":
-                    "Elsevier",
+                "publication_charge":
+                    publication_charge,
 
-                "url":
-                    journal_url
+                "Open access":
+                    open_access,
+
+                "subscription":
+                    subscription
             }
 
-            yield journal
-
-            print(
-                f"[OK] Added: {title}"
+            all_journals.append(
+                journal
             )
-
-            time.sleep(0.1)
 
         except Exception as e:
 
             print(
-                f"[!] Search Error: {e}"
+                f"Error: {e}"
             )
+
+    driver.quit()
+
+    # =====================================
+    # REMOVE DUPLICATES
+    # =====================================
+
+    unique_journals = []
+    seen = set()
+
+    for item in all_journals:
+
+        if item["title"] not in seen:
+
+            seen.add(
+                item["title"]
+            )
+
+            unique_journals.append(
+                item
+            )
+
+    return unique_journals

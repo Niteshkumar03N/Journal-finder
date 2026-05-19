@@ -1,442 +1,229 @@
-"""
-Springer Journal Finder
-FINAL VERSION
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
-Features:
-- Abstract -> Keyword Extraction
-- Springer Search
-- Extract Journal Metrics
-- Save ALL Results in JSON
-"""
-
-from scrapling.fetchers import StealthyFetcher
-from urllib.parse import quote_plus
-import json
-import re
 import time
 
 
-BASE_URL = "https://link.springer.com/search"
-OUTPUT_FILE = "journal.json"
+def find_journals(abstract_text):
 
+    # ============================================
+    # CHROME OPTIONS
+    # ============================================
 
-# =====================================
-# Keyword Extraction
-# =====================================
+    options = Options()
+    options.add_argument("--headless=new")
 
-def extract_keywords(text):
-
-    text = text.lower()
-
-    text = re.sub(r"[^a-zA-Z0-9\s]", " ", text)
-
-    stopwords = {
-        "the", "is", "a", "an", "and", "or",
-        "for", "to", "of", "in", "on", "with",
-        "this", "that", "we", "will", "are",
-        "be", "from", "by", "as", "at"
-    }
-
-    words = []
-
-    for word in text.split():
-
-        if word not in stopwords and len(word) > 2:
-            words.append(word)
-
-    return " ".join(words[:10])
-
-
-# =====================================
-# Extract Journal Metrics
-# =====================================
-
-def extract_journal_metrics(journal_url):
-
-    metrics = {
-
-        "journal_name": "N/A",
-        "impact_factor": "N/A",
-        "submission_to_first_decision": "N/A",
-        "publishing_model": "N/A"
-    }
-
-    try:
-
-        print(f"\n   [->] Opening Journal: {journal_url}")
-
-        page = StealthyFetcher.fetch(
-            journal_url,
-            headless=True,
-            network_idle=True,
-        )
-
-        html = page.html_content
-
-        # =========================
-        # Journal Name
-        # =========================
-
-        name_match = re.search(
-            r'<h1[^>]*>(.*?)</h1>',
-            html,
-            re.DOTALL | re.IGNORECASE
-        )
-
-        if name_match:
-
-            name = re.sub(
-                r"<.*?>",
-                "",
-                name_match.group(1)
-            )
-
-            metrics["journal_name"] = name.strip()
-
-        # =========================
-        # Impact Factor
-        # =========================
-
-        impact_match = re.search(
-            r'Impact factor[^0-9]*([\d.]+)',
-            html,
-            re.IGNORECASE
-        )
-
-        if impact_match:
-
-            metrics["impact_factor"] = (
-                impact_match.group(1)
-            )
-
-        # =========================
-        # Submission to First Decision
-        # =========================
-
-        decision_match = re.search(
-            r'Submission to first decision[^0-9]*(\d+\s*days)',
-            html,
-            re.IGNORECASE
-        )
-
-        if decision_match:
-
-            metrics["submission_to_first_decision"] = (
-                decision_match.group(1)
-            )
-
-        # =========================
-        # Publishing Model
-        # =========================
-
-        if "Hybrid" in html:
-
-            metrics["publishing_model"] = "Hybrid"
-
-        elif "Open access" in html:
-
-            metrics["publishing_model"] = "Open Access"
-
-    except Exception as e:
-
-        print(f"[!] Metrics Error: {e}")
-
-    return metrics
-
-
-# =====================================
-# Search Springer
-# =====================================
-
-# def search_springer(query):
-
-#     encoded_query = quote_plus(query)
-
-#     url = (
-#         f"{BASE_URL}"
-#         f"?query={encoded_query}"
-#         f"&search-within=Journals"
-#     )
-
-#     print(f"\n[*] Searching Springer...")
-#     print(f"[*] URL: {url}")
-
-#     page = StealthyFetcher.fetch(
-#         url,
-#         headless=True,
-#         network_idle=True,
-#     )
-
-#     print(f"[*] Status: {page.status}")
-
-#     cards = page.css("li.app-card-open")
-
-#     if not cards:
-#         cards = page.css("article")
-
-#     print(f"[*] Found {len(cards)} results")
-
-#     journals = []
-
-#     visited = set()
-
-#     # =====================================
-#     # LOOP THROUGH ALL RESULTS
-#     # =====================================
-
-#     for idx, card in enumerate(cards, start=1):
-
-#         try:
-
-#             print(f"\n======================")
-#             print(f"Processing Result {idx}")
-#             print(f"======================")
-
-#             links = card.css("a")
-
-#             journal_url = None
-
-#             for a in links:
-
-#                 href = a.attrib.get("href", "")
-
-#                 if "/journal/" in href:
-
-#                     if href.startswith("/"):
-
-#                         journal_url = (
-#                             "https://link.springer.com" + href
-#                         )
-
-#                     else:
-#                         journal_url = href
-
-#                     break
-
-#             if not journal_url:
-
-#                 print("[!] No journal URL found")
-#                 continue
-
-#             # avoid duplicate journals
-#             if journal_url in visited:
-
-#                 print("[!] Duplicate skipped")
-#                 continue
-
-#             visited.add(journal_url)
-
-#             # =========================
-#             # Extract Metrics
-#             # =========================
-
-#             metrics = extract_journal_metrics(
-#                 journal_url
-#             )
-
-#             metrics["url"] = journal_url
-
-#             metrics["publisher"] = "Springer"
-
-#             journals.append(metrics)
-
-#             print(
-#                 f"[OK] Added: "
-#                 f"{metrics['journal_name']}"
-#             )
-
-#             # avoid blocking
-#             time.sleep(1)
-
-#         except Exception as e:
-
-#             print(f"[!] Search Error: {e}")
-
-#     return journals
-
-
-# =====================================
-# Search Springer
-# =====================================
-
-def search_springer(query):
-
-    encoded_query = quote_plus(query)
-
-    url = (
-        f"{BASE_URL}"
-        f"?query={encoded_query}"
-        f"&search-within=Journals"
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
     )
 
-    print(f"\n[*] Searching Springer...")
-    print(f"[*] URL: {url}")
+    driver.maximize_window()
 
-    page = StealthyFetcher.fetch(
-        url,
-        headless=True,
-        network_idle=True,
+    # ============================================
+    # OPEN WEBSITE
+    # ============================================
+
+    driver.get(
+        "https://link.springer.com/journals/journal-finder"
     )
 
-    print(f"[*] Status: {page.status}")
+    wait = WebDriverWait(driver, 30)
 
-    cards = page.css("li.app-card-open")
+    # ============================================
+    # FIND ABSTRACT TEXTAREA
+    # ============================================
 
-    if not cards:
-        cards = page.css("article")
+    textarea = wait.until(
+        EC.element_to_be_clickable(
+            (By.ID, "manuscript-abstract")
+        )
+    )
 
-    print(f"[*] Found {len(cards)} results")
+    # Scroll to textarea
+    driver.execute_script(
+        "arguments[0].scrollIntoView({block:'center'});",
+        textarea
+    )
 
-    journals = []
+    time.sleep(2)
 
-    # =====================================
-    # LOOP THROUGH ALL RESULTS
-    # =====================================
+    # Click textarea
+    driver.execute_script(
+        "arguments[0].click();",
+        textarea
+    )
 
-    for idx, card in enumerate(cards, start=1):
+    time.sleep(1)
+
+    # Enter abstract
+    driver.execute_script(
+        "arguments[0].value = arguments[1];",
+        textarea,
+        abstract_text
+    )
+
+    # Trigger input event
+    driver.execute_script("""
+    arguments[0].dispatchEvent(
+        new Event('input', { bubbles: true })
+    );
+    """, textarea)
+
+    # ============================================
+    # CLICK FIND JOURNALS BUTTON
+    # ============================================
+
+    find_button = wait.until(
+        EC.element_to_be_clickable(
+            (By.ID, "search-submit")
+        )
+    )
+
+    driver.execute_script(
+        "arguments[0].scrollIntoView({block:'center'});",
+        find_button
+    )
+
+    time.sleep(2)
+
+    driver.execute_script(
+        "arguments[0].click();",
+        find_button
+    )
+
+    # ============================================
+    # WAIT FOR RESULTS
+    # ============================================
+
+    wait.until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, "li.app-card-open")
+        )
+    )
+
+    time.sleep(5)
+
+    # ============================================
+    # GET ALL JOURNALS
+    # ============================================
+
+    journals = driver.find_elements(
+        By.CSS_SELECTOR,
+        "li.app-card-open"
+    )
+
+    all_results = []
+
+    # ============================================
+    # SCRAPE EACH JOURNAL
+    # ============================================
+
+    for journal in journals:
 
         try:
 
-            print(f"\n======================")
-            print(f"Processing Result {idx}")
-            print(f"======================")
+            # ====================================
+            # TITLE
+            # ====================================
 
-            links = card.css("a")
+            try:
+                title = journal.find_element(
+                    By.CSS_SELECTOR,
+                    "h2.app-card-open__heading a span"
+                ).text.strip()
 
-            journal_url = None
+            except:
+                title = ""
 
-            for a in links:
+            # ====================================
+            # LINK
+            # ====================================
 
-                href = a.attrib.get("href", "")
+            try:
+                link = journal.find_element(
+                    By.CSS_SELECTOR,
+                    "h2.app-card-open__heading a"
+                ).get_attribute("href")
 
-                if "/journal/" in href:
+            except:
+                link = ""
 
-                    if href.startswith("/"):
+            # ====================================
+            # DEFAULT VALUES
+            # ====================================
 
-                        journal_url = (
-                            "https://link.springer.com" + href
-                        )
+            publishing_model = ""
+            impact_factor = ""
+            downloads = ""
+            submission_to_first_decision = ""
 
-                    else:
-                        journal_url = href
+            # ====================================
+            # METADATA
+            # ====================================
 
-                    break
-
-            if not journal_url:
-
-                print("[!] No journal URL found")
-                continue
-
-            # =========================
-            # Extract Metrics
-            # =========================
-
-            metrics = extract_journal_metrics(
-                journal_url
+            metadata = journal.find_elements(
+                By.CSS_SELECTOR,
+                "dl.app-card-open__metadata-list div"
             )
 
-            metrics["url"] = journal_url
+            for item in metadata:
 
-            metrics["publisher"] = "Springer"
+                try:
 
-            journals.append(metrics)
+                    key = item.find_element(
+                        By.CSS_SELECTOR,
+                        "dt"
+                    ).text.strip().lower()
 
-            print(
-                f"[OK] Added: "
-                f"{metrics['journal_name']}"
-            )
+                    value = item.find_element(
+                        By.CSS_SELECTOR,
+                        "dd"
+                    ).text.strip()
 
-            # avoid blocking
-            time.sleep(0.2)
+                    # ====================================
+                    # MATCH FIELDS
+                    # ====================================
+
+                    if "publishing model" in key:
+                        publishing_model = value
+
+                    elif "impact factor" in key:
+                        impact_factor = value
+
+                    elif "downloads" in key:
+                        downloads = value
+
+                    elif "submission to first decision" in key:
+                        submission_to_first_decision = value
+
+                except:
+                    pass
+
+            # ====================================
+            # FINAL DATA
+            # ====================================
+
+            data = {
+                "title": title,
+                "link": link,
+                "Publishing Model": publishing_model,
+                "impact_factor": impact_factor,
+                "Downloads": downloads,
+                "submission_to_first_decision": submission_to_first_decision
+            }
+
+            if data not in all_results:
+                all_results.append(data)
 
         except Exception as e:
+            print("Error:", e)
 
-            print(f"[!] Search Error: {e}")
+    driver.quit()
 
-    return journals
-
-
-# =====================================
-# Save JSON
-# =====================================
-
-def save_results(results):
-
-    with open(
-        OUTPUT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            results,
-            f,
-            indent=2,
-            ensure_ascii=False
-        )
-
-    print(
-        f"\n[OK] Saved "
-        f"{len(results)} journals "
-        f"to {OUTPUT_FILE}"
-    )
-
-
-# =====================================
-# MAIN
-# =====================================
-
-if __name__ == "__main__":
-
-    abstract = input("\nEnter Abstract:\n\n")
-
-    # =====================================
-    # Extract Keywords
-    # =====================================
-
-    keywords = extract_keywords(abstract)
-
-    print(f"\n[*] Extracted Keywords:")
-    print(keywords)
-
-    # =====================================
-    # Search Journals
-    # =====================================
-
-    results = search_springer(keywords)
-
-    # =====================================
-    # Save JSON
-    # =====================================
-
-    save_results(results)
-
-    # =====================================
-    # Console Output
-    # =====================================
-
-    print("\n========== FINAL RESULTS ==========\n")
-
-    for j in results:
-
-        print(f"Journal: {j['journal_name']}")
-
-        print(
-            f"Impact Factor: "
-            f"{j['impact_factor']}"
-        )
-
-        print(
-            f"First Decision: "
-            f"{j['submission_to_first_decision']}"
-        )
-
-        print(
-            f"Publishing Model: "
-            f"{j['publishing_model']}"
-        )
-
-        print(f"URL: {j['url']}")
-
-        print("-" * 60)
-
+    return all_results
