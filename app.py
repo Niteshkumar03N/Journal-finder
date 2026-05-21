@@ -509,10 +509,10 @@ with col3:
     taylor = st.checkbox("Taylor & Francis", value=True)
 
 with col4:
-    wiley = st.checkbox("Wiley", value=True)
+    cwauthors = st.checkbox("CW Authors", value=True)
 
 with col5:
-    cwauthors = st.checkbox("CW Authors", value=True)
+    wiley = st.checkbox("Wiley", value=True)
 
 # =====================================
 # SEARCH BUTTON
@@ -708,71 +708,163 @@ if search:
         # Divider
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-        # Results
+        # =====================================
+        # GROUP RESULTS BY PUBLISHER
+        # =====================================
+
+        publisher_groups = {}
+
         for result in all_results:
 
-            # Build badges
-            badges = ""
-            if result.get("publisher"):
-                badges += f'<span class="badge badge-pub">{result["publisher"]}</span> '
-            if result.get("impact_factor"):
-                badges += f'<span class="badge badge-if">Impact Factor {result["impact_factor"]}</span> '
-            if result.get("citescore"):
-                badges += f'<span class="badge badge-cs">CiteScore {result["citescore"]}</span> '
-            if result.get("publisher") == "Springer":
+            publisher = result.get("publisher", "Other")
 
-                if result.get("downloads"):
+            if publisher not in publisher_groups:
+                publisher_groups[publisher] = []
 
-                    clean_downloads = str(
-                        result["downloads"]
-                    )
+            publisher_groups[publisher].append(result)
+
+        # =====================================
+        # SHOW RESULTS
+        # =====================================
+
+        for publisher_name, publisher_results in publisher_groups.items():
+
+            st.markdown(f"""
+            <h2 style="
+                margin-top:40px;
+                margin-bottom:20px;
+                color:#1a1a2e;
+                font-size:32px;
+                font-weight:700;
+            ">
+                {publisher_name}
+            </h2>
+            """, unsafe_allow_html=True)
+
+            for result in publisher_results:
+
+                # =====================================
+                # BUILD BADGES
+                # =====================================
+
+                badges = ""
+
+                if result.get("publisher"):
 
                     badges += (
-                        f'<span class="badge badge-cs">'
-                        f'Downloads {clean_downloads}'
+                        f'<span class="badge badge-pub">'
+                        f'{result["publisher"]}'
                         f'</span> '
                     )
 
-                else:
+                if result.get("impact_factor"):
 
-                    if result.get("citescore"):
+                    badges += (
+                        f'<span class="badge badge-if">'
+                        f'Impact Factor {result["impact_factor"]}'
+                        f'</span> '
+                    )
+
+                if result.get("citescore"):
+
+                    badges += (
+                        f'<span class="badge badge-cs">'
+                        f'CiteScore {result["citescore"]}'
+                        f'</span> '
+                    )
+
+                # =====================================
+                # SPRINGER DOWNLOADS
+                # =====================================
+
+                if result.get("publisher") == "Springer":
+
+                    if result.get("downloads"):
+
+                        clean_downloads = str(
+                            result["downloads"]
+                        )
 
                         badges += (
                             f'<span class="badge badge-cs">'
-                            f'CiteScore {result["citescore"]}'
+                            f'Downloads {clean_downloads}'
                             f'</span> '
                         )
-            
-            if result.get("publishing_model"):
-                badges += f'<span class="badge badge-oa">{result["publishing_model"]}</span> '
 
-            if result.get("submission_to_first_decision"):
-                badges += f'<span class="badge-time"> Submission to First Decision: {result["submission_to_first_decision"]}</span>'
+                # =====================================
+                # PUBLISHING MODEL
+                # =====================================
 
-            if result.get("publication_charge"):
+                if result.get("publishing_model"):
 
-                badges += (
-                    f'<span class="badge badge-oa">'
-                    f'APC {result["publication_charge"]}'
-                    f'</span> '
+                    badges += (
+                        f'<span class="badge badge-oa">'
+                        f'{result["publishing_model"]}'
+                        f'</span> '
+                    )
+
+                # =====================================
+                # SUBMISSION TIME
+                # =====================================
+
+                if result.get("submission_to_first_decision"):
+
+                    badges += (
+                        f'<span class="badge badge-cs">'
+                        f'Submission to First Decision: '
+                        f'{result["submission_to_first_decision"]}'
+                        f'</span> '
+                    )
+
+                # =====================================
+                # APC
+                # =====================================
+
+                if result.get("publication_charge"):
+
+                    badges += (
+                        f'<span class="badge badge-oa">'
+                        f'APC {result["publication_charge"]}'
+                        f'</span> '
+                    )
+
+                # =====================================
+                # ACCEPTANCE TO PUBLICATION
+                # =====================================
+
+                if result.get("acceptance_to_publication"):
+
+                    badges += (
+                        f'<span class="badge badge-cs">'
+                        f'Acceptance to Publication '
+                        f'{result["acceptance_to_publication"]}'
+                        f'</span> '
+                    )
+
+                # =====================================
+                # OPEN BUTTON
+                # =====================================
+
+                open_btn = (
+                    f'<a class="open-link" '
+                    f'href="{result["url"]}" '
+                    f'target="_blank">'
+                    f'↗ Open Journal'
+                    f'</a>'
                 )
 
-            if result.get("acceptance_to_publication"):
+                # =====================================
+                # CARD UI
+                # =====================================
 
-                badges += (
-                    f'<span class="badge badge-cs">'
-                    f'Acceptance to Publication '
-                    f'{result["acceptance_to_publication"]}'
-                    f'</span> '
-                )
-
-
-            open_btn = f'<a class="open-link" href="{result["url"]}" target="_blank">↗ Open Journal</a>'
-
-            st.markdown(f"""
-            <div class="journal-card">
-                {open_btn}
-                <div class="journal-title">{result["journal_name"]}</div>
-                <div class="journal-meta">{badges}</div>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="journal-card">
+                    {open_btn}
+                    <div class="journal-title">
+                        {result["journal_name"]}
+                    </div>
+                    <div class="journal-meta">
+                        {badges}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
