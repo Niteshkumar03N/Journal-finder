@@ -25,7 +25,7 @@ def scrape_wiley_journals(abstract_text):
         options=options
     )
 
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 60)
 
     all_results = []
 

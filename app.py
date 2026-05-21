@@ -9,7 +9,7 @@ from search.springer_scraper import find_journals
 from search.elsevier_scraper import search_elsevier
 from search.taylor_scraper import search_taylor
 from search.wiley_scraper import scrape_wiley_journals
-# from search.cwauthors_scraper import search_cwauthors
+from search.cwauthors_scraper import search_cwauthors
 
 # =====================================
 # PAGE CONFIG
@@ -497,7 +497,7 @@ abstract = st.text_area(
 
 st.markdown('<div class="section-label">Publishers</div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     springer = st.checkbox("Springer", value=True)
@@ -508,11 +508,11 @@ with col2:
 with col3:
     taylor = st.checkbox("Taylor & Francis", value=True)
 
-# with col4:
-#     cwauthors = st.checkbox("CW Authors", value=True)
-
 with col4:
     wiley = st.checkbox("Wiley", value=True)
+
+with col5:
+    cwauthors = st.checkbox("CW Authors", value=True)
 
 # =====================================
 # SEARCH BUTTON
@@ -531,11 +531,6 @@ if search:
 
     else:
         all_results = []
-
-        # Keywords
-        # keywords = extract_keywords(abstract)
-        # st.markdown('<div class="section-label" style="margin-top:1rem">Extracted Keywords</div>', unsafe_allow_html=True)
-        # st.code(keywords)
 
         # =====================================
         # SPRINGER
@@ -569,8 +564,9 @@ if search:
 
                     all_results.append(formatted_result)
 
-
+        # =====================================
         # Elsevier
+        # =====================================
 
         if elsevier:
 
@@ -638,16 +634,47 @@ if search:
                         formatted_result
                     )
 
+        # =====================================
         # Taylor & Francis
+        # =====================================
+
         if taylor:
             with st.spinner("Searching..."):
                 all_results.extend(search_taylor(abstract))
 
-        # # CW Authors
-        # if cwauthors:
-        #     with st.spinner("Searching..."):
-        #         all_results.extend(search_cwauthors(abstract))
+
+        # =====================================
+        # CW Authors
+        # =====================================
+
+        if cwauthors:
+
+            with st.spinner("Searching..."):
+
+                cwauthors_results = search_cwauthors(abstract)
+
+                for _, item in cwauthors_results.iterrows():
+
+                    formatted_result = {
+
+                        "journal_name": item.get("Title"),
+
+                        "publisher": item.get("Publisher"),
+
+                        "impact_factor": item.get("Impact Factor"),
+
+                        "citescore": item.get("CiteScore"),
+
+                        "url": item.get("Link")
+                    }
+
+                    all_results.append(formatted_result)
+
+
+        # =====================================
         # Wiley
+        # =====================================
+
         if wiley:
             with st.spinner("Searching..."):
 
@@ -667,8 +694,7 @@ if search:
 
                     all_results.append(formatted_result)
 
-        # Count
-        # st.success(f"✦ {len(all_results)} journals found")
+
 
         # Download
         json_data = json.dumps(all_results, indent=2, ensure_ascii=False)
@@ -691,8 +717,8 @@ if search:
                 badges += f'<span class="badge badge-pub">{result["publisher"]}</span> '
             if result.get("impact_factor"):
                 badges += f'<span class="badge badge-if">Impact Factor {result["impact_factor"]}</span> '
-            # if result.get("citescore"):
-            #     badges += f'<span class="badge badge-cs">CiteScore {result["citescore"]}</span> '
+            if result.get("citescore"):
+                badges += f'<span class="badge badge-cs">CiteScore {result["citescore"]}</span> '
             if result.get("publisher") == "Springer":
 
                 if result.get("downloads"):
