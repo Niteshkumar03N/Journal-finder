@@ -7,9 +7,12 @@ from urllib.parse import quote_plus
 import re
 import time
 
-BASE_URL = (
-    "https://journalfinder.elsevier.com/results"
-)
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+BASE_URL = os.getenv("ELSEVIER_URL")
 
 # =====================================
 # SEARCH FUNCTION

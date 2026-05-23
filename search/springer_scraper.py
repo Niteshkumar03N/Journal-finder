@@ -7,6 +7,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 import time
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 def find_journals(abstract_text):
@@ -29,9 +33,9 @@ def find_journals(abstract_text):
     # OPEN WEBSITE
     # ============================================
 
-    driver.get(
-        "https://link.springer.com/journals/journal-finder"
-    )
+    SPRINGER_URL = os.getenv("SPRINGER_URL")
+
+    driver.get(SPRINGER_URL)
 
     wait = WebDriverWait(driver, 30)
 

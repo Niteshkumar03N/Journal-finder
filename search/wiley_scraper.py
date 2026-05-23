@@ -6,7 +6,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 def scrape_wiley_journals(abstract_text):
 
@@ -31,7 +34,8 @@ def scrape_wiley_journals(abstract_text):
 
     try:
 
-        driver.get("https://www.wiley.com/en-us/journal-finder/abstract")
+        WILEY_URL = os.getenv("WILEY_URL")
+        driver.get(WILEY_URL)
 
         # =========================
         # TITLE INPUT

@@ -518,7 +518,7 @@ with col5:
 # SEARCH BUTTON
 # =====================================
 
-search = st.button("Find Journals ↗")
+search = st.button("Find Journals")
 
 # =====================================
 # SEARCH LOGIC

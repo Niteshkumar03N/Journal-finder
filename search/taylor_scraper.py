@@ -6,7 +6,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 def search_taylor(abstract):
 
@@ -29,9 +32,9 @@ def search_taylor(abstract):
 
         wait = WebDriverWait(driver, 30)
 
-        driver.get(
-            "https://authorservices.taylorandfrancis.com/publishing-your-research/choosing-a-journal/journal-suggester/"
-        )
+        TAYLOR_URL = os.getenv("TAYLOR_URL")
+
+        driver.get(TAYLOR_URL)
 
         textarea = wait.until(
             EC.presence_of_element_located(

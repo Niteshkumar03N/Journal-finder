@@ -3,3 +3,4 @@ scrapling[all]
 pandas
 selenium
 webdriver-manager
+python-dotenv

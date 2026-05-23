@@ -10,6 +10,11 @@ import time
 import csv
 import pandas as pd
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 
 def search_cwauthors(abstract_text):
 
@@ -28,7 +33,9 @@ def search_cwauthors(abstract_text):
 
     wait = WebDriverWait(driver, 120)
 
-    driver.get("https://www.cwauthors.com/journal-finder")
+    CWAUTHORS_URL = os.getenv("CWAUTHORS_URL")
+
+    driver.get(CWAUTHORS_URL)
 
     # =============================
     # ENTER ABSTRACT
