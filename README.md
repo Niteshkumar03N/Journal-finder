@@ -79,11 +79,15 @@ The app will open at `http://localhost:8501`.
 
 ## Usage
 
+<div align="left">
+
 1. Paste your research abstract into the text area.
 2. Select one or more publishers using the checkboxes.
 3. Click **Find Journals**.
 4. Browse results grouped by publisher — each card shows title, metadata badges, and a direct link.
 5. Download all results as a JSON file using the export button.
+
+</div>
 
 ---
 
@@ -155,10 +159,12 @@ python-dotenv
 
 ## Known Limitations
 
-- **Speed:** Each scraper runs a real browser session. Expect 15–60 seconds per publisher depending on network conditions and page load time.
-- **Fragility:** Scrapers depend on the publisher's current HTML structure. If a publisher updates their frontend, CSS selectors may require updating.
-- **Taylor & Francis:** Currently extracts title and URL only. Additional metadata fields are not yet parsed.
-- **Rate sensitivity:** Avoid sending repeated requests in rapid succession to prevent temporary blocks.
+| | |
+|---|---|
+| **Speed** | Each scraper runs a real browser session. Expect 15–60 seconds per publisher depending on network conditions. |
+| **Fragility** | Scrapers depend on the publisher's current HTML structure. If a publisher updates their frontend, selectors may need updating. |
+| **Taylor & Francis** | Currently extracts title and URL only. Additional metadata fields are not yet parsed. |
+| **Rate sensitivity** | Avoid sending repeated requests in rapid succession to prevent temporary blocks. |
 
 ---
 
