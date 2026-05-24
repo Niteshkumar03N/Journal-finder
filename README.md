@@ -28,23 +28,6 @@ No API keys required. No manual cross-referencing. One abstract, one click.
 | **CW Authors** | Title · Publisher · CiteScore · Impact Factor |
 | **Wiley** | Title · Impact Factor · Submission Time · Acceptance Rate · Publication Charge |
 
----
-
-## Project Structure
-
-```
-journal-finder/
-├── app.py                      # Streamlit application — UI, layout, result orchestration
-├── search/
-│   ├── springer_scraper.py     # Springer Nature journal finder scraper
-│   ├── elsevier_scraper.py     # Elsevier journal finder scraper
-│   ├── taylor_scraper.py       # Taylor & Francis journal finder scraper
-│   ├── cwauthors_scraper.py    # CW Authors multi-publisher scraper
-│   └── wiley_scraper.py        # Wiley journal finder scraper
-├── requirements.txt            # Python dependencies
-├── .env                        # Environment variables (not committed)
-└── README.md
-```
 
 ---
 
